@@ -1,0 +1,41 @@
+{
+  "incident_number": "INC0001240",
+  "short_description": "CRITICAL P0: Production database primary node failure - COMPLETE SERVICE OUTAGE",
+  "description": "At 2026-06-20T17:42:00Z, the PostgreSQL primary node (db-primary-prod-01, r6g.4xlarge) experienced a catastrophic storage subsystem failure. All write operations ceased immediately. Read replicas are serving stale data from approximately 17:41:58Z. The automatic failover to the standby node (db-standby-prod-01) DID NOT trigger because the replication lag exceeded the configured maximum of 30 seconds (actual lag: 47 seconds at time of failure). All production services dependent on the database are returning HTTP 503 errors. Affected services include: order-service, user-service, payment-gateway, inventory-service, notification-service, analytics-service, auth-gateway, and admin-portal. This is a COMPLETE service outage affecting 100% of customers globally (approximately 23,000 active sessions dropped). The incident was detected by automated health checks at 17:42:15Z and PagerDuty alerts were triggered for all on-call engineers. EBS volume status check shows 'impaired' status on the primary node's data volumes (vol-0a1b2c3d4e5f67890). AWS Health Dashboard does not show any regional issues. Current hypothesis: EBS volume corruption possibly due to an underlying hardware failure in the us-east-1c availability zone. Recovery options being evaluated: (1) Force promote standby to primary with potential data loss of ~47 seconds of transactions, (2) Attempt EBS volume recovery/snapshot restore on primary, (3) Point-in-time recovery from last automated backup (RPO: 15 minutes). Customer-facing status page has been updated to 'Major Outage'. Executive leadership and board members have been notified via the P0 escalation protocol.",
+  "urgency": 1,
+  "impact": 1,
+  "priority": "P1",
+  "state": "New",
+  "assigned_to": "maria.gonzalez",
+  "assignment_group": "Database Reliability Engineering",
+  "category": "Infrastructure",
+  "subcategory": "Database",
+  "sla_deadline": "2026-06-20T19:42:00Z",
+  "created_at": "2026-06-20T17:42:15Z",
+  "updated_at": "2026-06-20T17:48:00Z",
+  "ci_affected": [
+    "db-primary-prod-01",
+    "db-standby-prod-01",
+    "order-service-prod",
+    "user-service-prod",
+    "payment-gateway-prod",
+    "inventory-service-prod",
+    "notification-service-prod",
+    "analytics-service-prod",
+    "auth-gateway-prod",
+    "admin-portal-prod"
+  ],
+  "business_impact": "TOTAL SERVICE OUTAGE. 100% of customers affected globally. Approximately 23,000 active sessions terminated. All transactions halted. Estimated revenue impact: $120K+ per hour. Regulatory notification may be required if outage exceeds 4 hours (SOC 2 Type II commitment).",
+  "workaround": "NONE. All database-dependent services are non-functional. Read replicas serving stale data only. Status page updated.",
+  "escalation_level": "Executive - CTO and VP Engineering notified",
+  "war_room": "https://meet.taskpilot.io/p0-war-room-20260620",
+  "timeline": [
+    {"time": "2026-06-20T17:42:00Z", "event": "Primary database node storage failure detected"},
+    {"time": "2026-06-20T17:42:15Z", "event": "PagerDuty alerts triggered for all on-call engineers"},
+    {"time": "2026-06-20T17:43:00Z", "event": "Automatic failover attempted but FAILED due to replication lag (47s > 30s threshold)"},
+    {"time": "2026-06-20T17:44:30Z", "event": "All production services confirmed returning 503 errors"},
+    {"time": "2026-06-20T17:45:00Z", "event": "Status page updated to Major Outage"},
+    {"time": "2026-06-20T17:46:00Z", "event": "P0 escalation protocol activated - executive leadership notified"},
+    {"time": "2026-06-20T17:48:00Z", "event": "War room established. DBA team evaluating forced failover vs backup restore"}
+  ]
+}

@@ -1,0 +1,31 @@
+# ============================================================
+# TaskPilot AI — Dependencies
+# ============================================================
+
+# --- Core LLM & Orchestration ---
+langchain
+langchain-google-genai
+langchain-core
+langgraph
+google-generativeai
+
+# --- Data Validation ---
+pydantic
+
+# --- Semantic Embeddings & Vector Search ---
+sentence-transformers
+faiss-cpu
+torch
+
+# --- Hashing (exact dedup) ---
+xxhash
+
+# --- MCP Tool Protocol ---
+fastmcp
+
+# --- Frontend ---
+streamlit
+
+# --- Utilities ---
+python-dotenv
+numpy

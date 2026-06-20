@@ -1,0 +1,57 @@
+[
+  {
+    "id": "MSG-20260620-001",
+    "from": "rajesh.kumar@taskpilot.io",
+    "to": ["priya.sharma@taskpilot.io", "platform-engineering@taskpilot.io"],
+    "cc": ["cto@taskpilot.io"],
+    "subject": "URGENT: Payment gateway failures - revenue impact growing",
+    "body": "Team, I just got off a call with our CFO and the payment gateway situation is getting worse. We're now seeing a 35% failure rate on checkout transactions and the revenue impact has crossed $45K per hour. I need someone to look into this ASAP and give me a root cause by end of day. Priya, I know you've started investigating - can you pull in additional help if needed? The Stripe webhook signature validation seems to be the culprit based on the error logs I've seen. We tried rolling back v3.12.1 but the database migration in that release makes a clean rollback impossible. I want a war room set up by 2 PM today with all hands on deck. Also, please make sure we have a customer communication drafted for our enterprise accounts explaining the situation and our ETA for resolution. This is our top priority - everything else can wait.",
+    "timestamp": "2026-06-20T11:30:00Z",
+    "is_read": true,
+    "importance": "high"
+  },
+  {
+    "id": "MSG-20260620-002",
+    "from": "lisa.zhang@taskpilot.io",
+    "to": ["jordan.williams@taskpilot.io", "alex.chen@taskpilot.io"],
+    "cc": ["product-team@taskpilot.io"],
+    "subject": "Customer demo prep for Acme Corp - June 23rd",
+    "body": "Hi Jordan and Alex, just a reminder that we have the Acme Corp demo scheduled for June 23rd at 2 PM PST. They're evaluating us against two competitors so this is a make-or-break moment for a $2.4M ARR deal. I need the new analytics dashboard to be in a presentable state by then - even if it's not fully production-ready, we need the key charts and the real-time data view working smoothly. Alex, can you make sure the search API performance is solid? Last time we demoed, the faceted search took almost 5 seconds to load and the Acme team noticed. We should also prepare a custom dataset that showcases our multi-tenant capabilities. Jordan, please set up a dedicated demo environment on our staging cluster and make sure it won't be affected by any ongoing deployments. I'll send the detailed agenda and talking points by tomorrow morning.",
+    "timestamp": "2026-06-20T14:15:00Z",
+    "is_read": false,
+    "importance": "high"
+  },
+  {
+    "id": "MSG-20260620-003",
+    "from": "maria.gonzalez@taskpilot.io",
+    "to": ["platform-engineering@taskpilot.io"],
+    "cc": [],
+    "subject": "Code review backlog - 3 PRs blocking Sprint 24 progress",
+    "body": "Hey team, I wanted to flag that we have a growing code review backlog that's starting to block sprint progress. PR #1847 (connection pool fix for order-service) has been open for 3 days with no reviewers - this is directly related to the connection pool exhaustion incident we're seeing in production. PR #1852 (API rate limiting middleware) is Alex's implementation and needs a thorough review since it touches the request pipeline for every API call. PR #1855 (tenant isolation for database migration) is my prep work for the v2.0 schema migration and it's the largest change at 1,200 lines, so I understand it takes time but we need it reviewed by Wednesday to stay on track. Can we agree on a rule that all PRs get a first review within 24 hours? I'm happy to review anyone else's PRs in exchange. Also, Daniel - I noticed your auth timeout fix branch has conflicts with main, you might want to rebase before submitting your PR.",
+    "timestamp": "2026-06-20T09:45:00Z",
+    "is_read": true,
+    "importance": "normal"
+  },
+  {
+    "id": "MSG-20260620-004",
+    "from": "security-team@taskpilot.io",
+    "to": ["priya.sharma@taskpilot.io", "platform-engineering@taskpilot.io", "cto@taskpilot.io"],
+    "cc": ["ciso@taskpilot.io"],
+    "subject": "ACTION REQUIRED: Critical CVE findings from weekly security scan",
+    "body": "This is an automated escalation from the Security Operations team. Our weekly Snyk vulnerability scan completed at 06:00 UTC today and identified 3 CRITICAL and 7 HIGH severity vulnerabilities in production services. The most urgent finding is CVE-2026-31245 in log4j-core which has a public proof-of-concept exploit available on GitHub - this is a remote code execution vulnerability affecting logging-service, audit-service, and notification-service. CVE-2026-28901 is a Spring Framework authentication bypass that could allow unauthorized access to protected endpoints in auth-gateway and user-service. Per our security policy, all critical CVEs must be patched within 48 hours of detection. We have deployed WAF rules as a temporary mitigation layer but this is not a long-term solution. Priya, as the designated security champion, please coordinate the patching effort across all affected services and confirm remediation timelines by EOD. A compliance report is due to the CISO by Friday.",
+    "timestamp": "2026-06-19T07:00:00Z",
+    "is_read": true,
+    "importance": "high"
+  },
+  {
+    "id": "MSG-20260620-005",
+    "from": "carlos.rivera@taskpilot.io",
+    "to": ["alex.chen@taskpilot.io", "product-team@taskpilot.io"],
+    "cc": ["rajesh.kumar@taskpilot.io"],
+    "subject": "FW: Client complaint - Globex Corp reporting unusable search performance",
+    "body": "Alex, forwarding this from our largest enterprise client Globex Corp. Their admin Sarah Thompson says the search functionality has become 'essentially unusable' since last week. She reports that search queries that used to return in under a second are now taking 4-5 seconds, and their team has started using browser bookmarks instead of our search feature. This is one of 3 enterprise accounts that have escalated search performance issues this week. Globex alone represents $850K in ARR and their renewal is coming up in August - if we don't fix this, we risk losing them. I understand this is related to the Elasticsearch 8.x upgrade but from the client's perspective, they just see a broken product. Can you give me a realistic timeline for when search will be back to normal so I can set expectations with these accounts? They're asking for a formal incident report as well.",
+    "timestamp": "2026-06-20T16:00:00Z",
+    "is_read": false,
+    "importance": "high"
+  }
+]
