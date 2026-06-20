@@ -1,0 +1,591 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>TaskPilot AI — Engineering Chief of Staff</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #0a0d14;
+    --panel: #11151f;
+    --panel-2: #161b27;
+    --line: #232a3a;
+    --amber: #ffb020;
+    --amber-dim: #7a5a1f;
+    --cyan: #4fd1c5;
+    --red: #ff5c5c;
+    --green: #34d399;
+    --text: #e8eaf0;
+    --muted: #8b93a7;
+    --faint: #545d72;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  body{
+    background: radial-gradient(ellipse 1200px 600px at 50% -10%, #131a28 0%, var(--bg) 55%);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    min-height: 100vh;
+    padding: 18px;
+  }
+  .mono{ font-family: 'IBM Plex Mono', monospace; }
+  .display{ font-family: 'Space Grotesk', sans-serif; }
+
+  /* ===== HEADER / FLIGHT STRIP ===== */
+  .header{
+    background: linear-gradient(180deg, var(--panel) 0%, #0d1119 100%);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 22px;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .header::before{
+    content:'';
+    position:absolute; inset:0;
+    background: repeating-linear-gradient(100deg, transparent 0 60px, rgba(79,209,197,0.04) 60px 61px);
+    animation: sweep 8s linear infinite;
+    pointer-events:none;
+  }
+  @keyframes sweep{ from{ background-position-x:0;} to{background-position-x:600px;} }
+  .header-top{ display:flex; align-items:center; justify-content:space-between; gap:16px; flex-wrap:wrap; position:relative; z-index:1;}
+  .brand{ display:flex; align-items:center; gap:12px; }
+  .brand-mark{
+    width:38px; height:38px; border-radius:8px;
+    background: linear-gradient(135deg, var(--amber), #c97b00);
+    display:flex; align-items:center; justify-content:center;
+    font-family:'Space Grotesk'; font-weight:700; color:#1a1206; font-size:18px;
+    box-shadow: 0 0 18px rgba(255,176,32,0.35);
+  }
+  .brand h1{ font-size:19px; letter-spacing:0.3px; }
+  .brand .tag{ color: var(--muted); font-size:11.5px; letter-spacing:1.5px; text-transform:uppercase; margin-top:1px;}
+  .header-actions{ display:flex; gap:10px; flex-wrap:wrap; }
+  .btn{
+    font-family:'IBM Plex Mono'; font-size:12.5px; letter-spacing:0.3px;
+    padding: 9px 14px; border-radius:7px; border:1px solid var(--line);
+    background: var(--panel-2); color: var(--text); cursor:pointer;
+    display:flex; align-items:center; gap:7px; transition: all .15s ease;
+  }
+  .btn:hover{ border-color: var(--cyan); color:var(--cyan); }
+  .btn:disabled{ opacity:.45; cursor:not-allowed; }
+  .btn.primary{ background: linear-gradient(135deg, var(--amber), #c97b00); color:#1a1206; border:none; font-weight:600;}
+  .btn.primary:hover{ filter:brightness(1.08); color:#1a1206; }
+  .btn.danger{ border-color: rgba(255,92,92,.4); color: var(--red); }
+  .btn.danger:hover{ border-color: var(--red); }
+
+  /* Agent pipeline */
+  .pipeline{ display:flex; align-items:center; margin-top:18px; position:relative; z-index:1; }
+  .node{ display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; min-width:0; }
+  .dot{
+    width:13px; height:13px; border-radius:50%;
+    background: var(--panel-2); border: 1.5px solid var(--line);
+    transition: all .25s ease;
+  }
+  .dot.active{ background: var(--cyan); border-color: var(--cyan); box-shadow: 0 0 12px var(--cyan); animation: pulse 1s ease-in-out infinite; }
+  .dot.done{ background: var(--green); border-color: var(--green); box-shadow: 0 0 8px var(--green); }
+  @keyframes pulse{ 0%,100%{ transform:scale(1);} 50%{ transform:scale(1.35);} }
+  .node-label{ font-family:'IBM Plex Mono'; font-size:10px; color: var(--faint); text-align:center; letter-spacing:.4px; white-space:nowrap; }
+  .node-label.active{ color: var(--cyan); }
+  .node-label.done{ color: var(--green); }
+  .connector{ height:1.5px; flex:1; background: var(--line); margin-bottom:20px; min-width:8px; }
+  .connector.done{ background: var(--green); }
+
+  /* ===== LAYOUT ===== */
+  .layout{ display:grid; grid-template-columns: 290px 1fr; gap:14px; align-items:start; }
+  @media (max-width: 900px){ .layout{ grid-template-columns: 1fr; } }
+
+  .panel{
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px;
+  }
+  .panel-title{
+    font-family:'IBM Plex Mono'; font-size:11px; color: var(--muted);
+    letter-spacing:1.5px; text-transform:uppercase; margin-bottom:12px;
+    display:flex; align-items:center; justify-content:space-between;
+  }
+  .badge{
+    font-family:'IBM Plex Mono'; font-size:10px; padding:2px 7px; border-radius:20px;
+    border:1px solid var(--line); color:var(--muted);
+  }
+
+  /* Sources feed */
+  .source-group{ margin-bottom:14px; }
+  .source-group h4{
+    font-family:'IBM Plex Mono'; font-size:10.5px; color:var(--cyan);
+    letter-spacing:1px; text-transform:uppercase; margin-bottom:8px;
+    display:flex; align-items:center; gap:6px;
+  }
+  .source-item{
+    font-size:12.5px; color: var(--muted); line-height:1.5;
+    padding: 8px 10px; background: var(--panel-2); border-radius:7px;
+    border-left: 2px solid var(--line); margin-bottom:6px;
+  }
+  .source-item b{ color: var(--text); font-weight:500; display:block; margin-bottom:2px; font-size:12.5px;}
+  .source-item.new{ border-left-color: var(--red); animation: flashIn .6s ease; }
+  @keyframes flashIn{ from{ background: rgba(255,92,92,.18);} to{ background: var(--panel-2);} }
+
+  /* Tabs */
+  .tabs{ display:flex; gap:4px; margin-bottom:14px; border-bottom:1px solid var(--line); }
+  .tab{
+    font-family:'IBM Plex Mono'; font-size:12px; letter-spacing:.3px;
+    padding: 10px 16px; cursor:pointer; color:var(--muted); border-bottom:2px solid transparent;
+    transition: all .15s ease;
+  }
+  .tab.active{ color: var(--amber); border-bottom-color: var(--amber); }
+  .tab-content{ display:none; }
+  .tab-content.active{ display:block; }
+
+  /* Priority runway */
+  .runway-row{
+    display:grid; grid-template-columns: 46px 1fr 90px; gap:14px; align-items:start;
+    padding: 14px; background: var(--panel-2); border:1px solid var(--line); border-radius:9px;
+    margin-bottom:10px; opacity:0; animation: rowIn .4s ease forwards;
+  }
+  @keyframes rowIn{ to{ opacity:1; } }
+  .runway-row.p1{ border-color: rgba(255,92,92,.5); box-shadow: 0 0 0 1px rgba(255,92,92,.08) inset; }
+  .rank-num{ font-family:'Space Grotesk'; font-size:26px; font-weight:700; color: var(--faint); line-height:1; }
+  .runway-row.p1 .rank-num{ color: var(--red); }
+  .runway-row.p2 .rank-num{ color: var(--amber); }
+  .task-title{ font-size:14.5px; font-weight:600; margin-bottom:4px; }
+  .task-meta{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:7px; }
+  .chip{ font-family:'IBM Plex Mono'; font-size:10px; padding:2px 8px; border-radius:20px; border:1px solid var(--line); color: var(--muted); }
+  .chip.sev-P1{ color: var(--red); border-color: rgba(255,92,92,.4); }
+  .chip.sev-P2{ color: var(--amber); border-color: rgba(255,176,32,.4); }
+  .chip.sev-P3{ color: var(--cyan); border-color: rgba(79,209,197,.35); }
+  .chip.dep{ color: #c79bff; border-color: rgba(199,155,255,.35); }
+  .rationale{ font-size:12.5px; color: var(--muted); line-height:1.5; }
+  .rationale b{ color: var(--text); font-weight:500; }
+  .score-col{ text-align:right; }
+  .score{ font-family:'IBM Plex Mono'; font-size:20px; font-weight:600; color: var(--text); }
+  .score-bar{ height:4px; border-radius:3px; background: var(--line); margin-top:6px; overflow:hidden; }
+  .score-bar i{ display:block; height:100%; background: linear-gradient(90deg, var(--cyan), var(--amber)); }
+  .merged-from{ font-size:10.5px; color: var(--faint); margin-top:6px; font-family:'IBM Plex Mono'; }
+
+  /* Daily plan */
+  .plan-item{ display:flex; gap:14px; padding:12px 4px; border-bottom:1px solid var(--line); align-items:flex-start; }
+  .plan-item:last-child{ border-bottom:none; }
+  .plan-order{ font-family:'Space Grotesk'; font-size:17px; font-weight:700; color: var(--amber); min-width:24px; }
+  .plan-reason{ font-size:12px; color: var(--muted); margin-top:3px; }
+  .weekly-box{ margin-top:16px; padding:14px; background: var(--panel-2); border-radius:8px; border:1px solid var(--line); font-size:13px; color:var(--muted); line-height:1.6; }
+  .weekly-box span{ color:var(--cyan); font-family:'IBM Plex Mono'; font-size:10px; letter-spacing:1px; display:block; margin-bottom:6px; text-transform:uppercase;}
+
+  /* Chat */
+  .chat-window{ display:flex; flex-direction:column; gap:10px; max-height:420px; overflow-y:auto; padding:4px 2px 10px 2px; margin-bottom:12px;}
+  .msg{ max-width:80%; padding:10px 13px; border-radius:10px; font-size:13.5px; line-height:1.55; }
+  .msg.user{ align-self:flex-end; background: linear-gradient(135deg, var(--amber-dim), #4a3712); color:#fff0d6; border:1px solid rgba(255,176,32,.3); }
+  .msg.bot{ align-self:flex-start; background: var(--panel-2); border:1px solid var(--line); }
+  .chips-row{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .suggestion-chip{
+    font-family:'IBM Plex Mono'; font-size:11.5px; padding:7px 12px; border-radius:20px;
+    border:1px solid var(--line); color: var(--muted); cursor:pointer; transition: all .15s ease;
+  }
+  .suggestion-chip:hover{ border-color:var(--cyan); color:var(--cyan); }
+  .chat-input-row{ display:flex; gap:8px; }
+  .chat-input{
+    flex:1; background: var(--panel-2); border:1px solid var(--line); border-radius:8px;
+    padding: 11px 13px; color: var(--text); font-family:'Inter'; font-size:13.5px;
+  }
+  .chat-input:focus{ outline:none; border-color: var(--cyan); }
+
+  .empty-state{ text-align:center; padding: 50px 20px; color: var(--muted); }
+  .empty-state .icon{ font-size:34px; margin-bottom:12px; opacity:.6; }
+  .empty-state p{ font-size:13px; max-width:380px; margin: 6px auto 0; line-height:1.6; }
+
+  .loader-text{ font-family:'IBM Plex Mono'; font-size:12px; color: var(--cyan); display:flex; align-items:center; gap:8px; padding:20px 0; }
+  .spin{ width:13px; height:13px; border-radius:50%; border:2px solid var(--line); border-top-color: var(--cyan); animation: spin .7s linear infinite; }
+  @keyframes spin{ to{ transform: rotate(360deg); } }
+
+  .error-banner{ background: rgba(255,92,92,.1); border:1px solid rgba(255,92,92,.4); color:#ffb3b3; padding:10px 14px; border-radius:8px; font-size:12.5px; margin-bottom:12px; }
+
+  ::-webkit-scrollbar{ width:7px; }
+  ::-webkit-scrollbar-thumb{ background: var(--line); border-radius:10px; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div class="brand">
+      <div class="brand-mark">TP</div>
+      <div>
+        <h1 class="display">TaskPilot AI</h1>
+        <div class="tag">Agentic Chief of Staff for Engineers</div>
+      </div>
+    </div>
+    <div class="header-actions">
+      <button class="btn primary" id="runBtn" onclick="runPipeline()">▶ Run Agents on Demo Data</button>
+      <button class="btn danger" id="injectBtn" onclick="injectIncident()" disabled>⚠ Inject P1 Incident</button>
+      <button class="btn" onclick="resetAll()">↺ Reset</button>
+    </div>
+  </div>
+
+  <div class="pipeline" id="pipeline">
+    <!-- nodes injected by JS -->
+  </div>
+</div>
+
+<div class="layout">
+
+  <!-- LEFT: SOURCES -->
+  <div class="panel">
+    <div class="panel-title">Live Data Sources <span class="badge" id="srcCount">4 feeds</span></div>
+    <div id="sourcesFeed"></div>
+  </div>
+
+  <!-- RIGHT: MAIN -->
+  <div class="panel">
+    <div class="tabs">
+      <div class="tab active" data-tab="queue" onclick="switchTab('queue')">Priority Queue</div>
+      <div class="tab" data-tab="plan" onclick="switchTab('plan')">Daily Plan</div>
+      <div class="tab" data-tab="chat" onclick="switchTab('chat')">Ask TaskPilot</div>
+    </div>
+
+    <div id="errorBanner"></div>
+
+    <div class="tab-content active" id="tab-queue">
+      <div id="queueContent">
+        <div class="empty-state">
+          <div class="icon">🛫</div>
+          <div class="display" style="font-size:15px;">No flight plan yet</div>
+          <p>Click "Run Agents on Demo Data" to ingest Jira, email, the defect tracker, and meeting notes — then watch TaskPilot extract, deduplicate, and rank everything into one explainable priority queue.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-plan">
+      <div id="planContent">
+        <div class="empty-state">
+          <div class="icon">📋</div>
+          <p>Run the agents first to generate today's plan and a weekly summary.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tab-content" id="tab-chat">
+      <div class="chips-row" id="chatSuggestions"></div>
+      <div class="chat-window" id="chatWindow"></div>
+      <div class="chat-input-row">
+        <input class="chat-input" id="chatInput" placeholder="Ask about your priorities, blockers, or what's next…" onkeydown="if(event.key==='Enter')sendChat()" />
+        <button class="btn primary" onclick="sendChat()">Ask</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============================ MOCK MULTI-SOURCE DATA ============================ */
+const jiraTasks = [
+  { id:'JIRA-101', title:'Fix Upload Bug', detail:'Users report file upload fails for files over 10MB since yesterday\'s deploy.', status:'In Progress' },
+  { id:'JIRA-104', title:'Review PR #42 — Add OAuth refresh token support', detail:'Open for 3 days.', status:'Open' },
+  { id:'JIRA-110', title:'Complete Login Feature — remember me checkbox', detail:'In progress, owned by Priya.', status:'In Progress' },
+  { id:'JIRA-118', title:'Update API Documentation for v2 endpoints', detail:'Overdue, low severity.', status:'Open' }
+];
+
+const emails = [
+  { from:'Sarah Chen (Customer Success)', subject:'URGENT — Customer escalation: upload failures', body:'We have 3 enterprise customers complaining that file uploads are failing intermittently since yesterday\'s deploy. Also — can you please fix the login bug before Friday, our biggest client is blocked from logging in after a password reset. This is becoming a major issue.' },
+  { from:'Mike Torres (Eng Manager)', subject:'PR review reminder', body:'PR #42 (OAuth refresh tokens) has been sitting for 3 days. Alex is blocked waiting on this to start the SSO work. Please prioritize review today.' },
+  { from:'ServiceNow Auto-Notification', subject:'INC0045892 — Sev-1 production incident', body:'Database connection pool exhausted intermittently on the checkout service. Auto-assigned to your team.' }
+];
+
+const defects = [
+  { id:'DEF-220', title:'Checkout page crashes on Safari mobile', severity:'Medium', reported:'2 days ago' },
+  { id:'DEF-225', title:'Memory leak in background sync worker', severity:'Low', reported:'5 days ago' }
+];
+
+const meetingNotes = `Monday Standup Transcript:
+Alex: I'm still blocked on the SSO integration, I need PR #42 merged first before I can start.
+Priya: Login feature, remember-me checkbox, still in progress — should be done by Wednesday.
+Team: Also discussed — documentation for the v2 API is overdue, would like that updated before the partner demo next week.`;
+
+let injectedIncidents = [];
+
+/* ============================ STATE ============================ */
+let appState = { tasks: [], dailyPlan: [], weeklySummary: '', extracted: [] };
+let pipelineRan = false;
+
+const AGENTS = ['Email Agent','Meeting Agent','Dedup Agent','Prioritization Agent','Planning Agent','Chat Agent'];
+
+/* ============================ RENDER: PIPELINE NODES ============================ */
+function renderPipeline(activeIdx=-1, doneUpTo=-1){
+  const el = document.getElementById('pipeline');
+  el.innerHTML = '';
+  AGENTS.forEach((name, i) => {
+    if (i>0){
+      const conn = document.createElement('div');
+      conn.className = 'connector' + (i-1 < doneUpTo ? ' done' : '');
+      el.appendChild(conn);
+    }
+    const node = document.createElement('div');
+    node.className = 'node';
+    const state = i < doneUpTo ? 'done' : (i === activeIdx ? 'active' : '');
+    node.innerHTML = `<div class="dot ${state}"></div><div class="node-label ${state}">${name}</div>`;
+    el.appendChild(node);
+  });
+}
+renderPipeline();
+
+/* ============================ RENDER: SOURCES ============================ */
+function renderSources(){
+  const el = document.getElementById('sourcesFeed');
+  let html = '';
+  html += `<div class="source-group"><h4>● Jira Board</h4>`;
+  jiraTasks.forEach(t => html += `<div class="source-item"><b>${t.id} · ${t.title}</b>${t.status} — ${t.detail}</div>`);
+  html += `</div>`;
+
+  html += `<div class="source-group"><h4>● Email Inbox</h4>`;
+  emails.forEach(e => html += `<div class="source-item"><b>${e.subject}</b>From ${e.from}: "${e.body.slice(0,90)}…"</div>`);
+  html += `</div>`;
+
+  html += `<div class="source-group"><h4>● Defect Tracker</h4>`;
+  defects.forEach(d => html += `<div class="source-item"><b>${d.id} · ${d.title}</b>Severity ${d.severity} — reported ${d.reported}</div>`);
+  html += `</div>`;
+
+  html += `<div class="source-group"><h4>● Meeting Notes</h4><div class="source-item">Monday standup transcript — 3 participants, captured by Meeting Agent.</div></div>`;
+
+  if (injectedIncidents.length){
+    html += `<div class="source-group"><h4 style="color:var(--red)">● ServiceNow (Live)</h4>`;
+    injectedIncidents.forEach(d => html += `<div class="source-item new"><b>${d.id} · ${d.title}</b>Severity ${d.severity} — ${d.reported}</div>`);
+    html += `</div>`;
+  }
+  el.innerHTML = html;
+  document.getElementById('srcCount').textContent = (4 + (injectedIncidents.length?1:0)) + ' feeds';
+}
+renderSources();
+
+/* ============================ CLAUDE API CALL ============================ */
+async function callClaude(system, userText){
+  const response = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-6',
+      max_tokens: 1000,
+      system: system,
+      messages: [{ role: 'user', content: userText }]
+    })
+  });
+  const data = await response.json();
+  if (data.error) throw new Error(data.error.message || 'API error');
+  const block = (data.content || []).find(b => b.type === 'text');
+  if (!block) throw new Error('No text response from model');
+  return block.text;
+}
+
+function parseJSONLoose(text){
+  let cleaned = text.trim().replace(/^```json/i,'').replace(/^```/,'').replace(/```$/,'').trim();
+  const start = cleaned.indexOf('{');
+  const end = cleaned.lastIndexOf('}');
+  if (start !== -1 && end !== -1) cleaned = cleaned.slice(start, end+1);
+  return JSON.parse(cleaned);
+}
+
+/* ============================ PROMPTS ============================ */
+const ANALYSIS_SYSTEM = `You are TaskPilot AI, a multi-agent engineering chief-of-staff with six internal agents: Email Agent, Meeting Agent, Dedup Agent, Prioritization Agent, Planning Agent, Chat Agent.
+
+Given raw data from a Jira-like board, an email inbox, a defect tracker, meeting notes, and possibly a live incident feed, do the following:
+
+1. (Email + Meeting Agents) Extract actionable tasks hidden in the email and meeting text that are NOT already explicit Jira/defect tickets.
+2. (Dedup Agent) Merge tasks referring to the same underlying issue across sources into ONE unified task list combining Jira, defects, your extracted tasks, and any live incidents.
+3. (Prioritization Agent) For every unified task assign severity (P1=critical/production down, P2=high, P3=medium, P4=low), priority_score (0-100), rank (1=highest, no gaps, no ties), dependencies (who/what is blocked — empty string if none), business_impact (short phrase), and a rationale explaining the rank using deadline, severity, dependencies and business impact.
+4. (Planning Agent) Produce an ordered daily_plan of what to work on today, and a 1-sentence weekly_summary.
+
+BE EXTREMELY CONCISE: every string field under 14 words. Max 6 items in "tasks", max 3 in "extracted_tasks", max 5 in "daily_plan".
+
+Return ONLY raw JSON, no markdown, no commentary, exactly this shape:
+{"extracted_tasks":[{"title":"","source":"","excerpt":"","deadline":""}],"tasks":[{"id":"","title":"","sources":[""],"deadline":"","severity":"P1","priority_score":0,"rank":1,"dependencies":"","business_impact":"","rationale":"","merged":false}],"daily_plan":[{"order":1,"task_id":"","title":"","reason":""}],"weekly_summary":""}`;
+
+function buildAnalysisUserPrompt(){
+  let s = `JIRA BOARD:\n` + jiraTasks.map(t=>`${t.id}: ${t.title} | ${t.status} | ${t.detail}`).join('\n');
+  s += `\n\nEMAIL INBOX:\n` + emails.map(e=>`From ${e.from} — ${e.subject}: ${e.body}`).join('\n');
+  s += `\n\nDEFECT TRACKER:\n` + defects.map(d=>`${d.id}: ${d.title} | severity ${d.severity} | reported ${d.reported}`).join('\n');
+  s += `\n\nMEETING NOTES:\n${meetingNotes}`;
+  if (injectedIncidents.length){
+    s += `\n\nLIVE INCIDENT FEED (just arrived, treat as highest urgency context):\n` + injectedIncidents.map(d=>`${d.id}: ${d.title} | severity ${d.severity} | ${d.reported}`).join('\n');
+  }
+  return s;
+}
+
+const CHAT_SYSTEM = `You are the Chat Agent of TaskPilot AI. Answer the engineer's question using ONLY the provided current task-state JSON (their unified, prioritized task list and daily plan). Be concise (2-4 sentences), conversational, and specific — reference task titles, ranks, severities, dependencies, or rationale when relevant. If asked about blockers, look at the "dependencies" field. If something isn't in the data, say so briefly.`;
+
+/* ============================ PIPELINE RUNNER ============================ */
+async function runPipeline(){
+  const runBtn = document.getElementById('runBtn');
+  const injectBtn = document.getElementById('injectBtn');
+  runBtn.disabled = true; injectBtn.disabled = true;
+  document.getElementById('errorBanner').innerHTML = '';
+  document.getElementById('queueContent').innerHTML = `<div class="loader-text"><div class="spin"></div> Agents are scanning sources, extracting, deduplicating and ranking…</div>`;
+
+  // animate pipeline lights sequentially while the single combined call runs
+  let stage = 0;
+  renderPipeline(0, -1);
+  const animTimer = setInterval(()=>{
+    stage = Math.min(stage+1, AGENTS.length-1);
+    renderPipeline(stage, stage-1);
+  }, 550);
+
+  try {
+    const raw = await callClaude(ANALYSIS_SYSTEM, buildAnalysisUserPrompt());
+    const json = parseJSONLoose(raw);
+    appState.tasks = (json.tasks || []).sort((a,b)=>a.rank-b.rank);
+    appState.dailyPlan = json.daily_plan || [];
+    appState.weeklySummary = json.weekly_summary || '';
+    appState.extracted = json.extracted_tasks || [];
+    pipelineRan = true;
+
+    clearInterval(animTimer);
+    renderPipeline(-1, AGENTS.length);
+    renderQueue();
+    renderPlan();
+    renderChatSuggestions();
+    if (!document.getElementById('chatWindow').childElementCount){
+      addChatMessage('bot', "Pipeline complete. I've ingested Jira, email, the defect tracker, and meeting notes — ask me anything about your priorities, blockers, or what to work on next.");
+    }
+  } catch(err){
+    clearInterval(animTimer);
+    renderPipeline();
+    document.getElementById('errorBanner').innerHTML = `<div class="error-banner">⚠ ${err.message}. Try running the agents again.</div>`;
+    document.getElementById('queueContent').innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Something went wrong calling the model. Click "Run Agents" to retry.</p></div>`;
+  } finally {
+    runBtn.disabled = false;
+    injectBtn.disabled = false;
+  }
+}
+
+async function injectIncident(){
+  const id = 'INC' + (4880 + injectedIncidents.length);
+  injectedIncidents.push({ id, title:'Payment service down — customers cannot checkout', severity:'Sev-1 Critical', reported:'just now' });
+  renderSources();
+  document.getElementById('errorBanner').innerHTML = `<div class="error-banner" style="background:rgba(255,176,32,.1); border-color:rgba(255,176,32,.4); color:#ffd98a;">⚡ New P1 incident detected — TaskPilot is re-prioritizing automatically…</div>`;
+  await runPipeline();
+}
+
+function resetAll(){
+  injectedIncidents = [];
+  appState = { tasks: [], dailyPlan: [], weeklySummary: '', extracted: [] };
+  pipelineRan = false;
+  renderSources();
+  renderPipeline();
+  document.getElementById('errorBanner').innerHTML = '';
+  document.getElementById('injectBtn').disabled = true;
+  document.getElementById('queueContent').innerHTML = `<div class="empty-state"><div class="icon">🛫</div><div class="display" style="font-size:15px;">No flight plan yet</div><p>Click "Run Agents on Demo Data" to ingest Jira, email, the defect tracker, and meeting notes — then watch TaskPilot extract, deduplicate, and rank everything into one explainable priority queue.</p></div>`;
+  document.getElementById('planContent').innerHTML = `<div class="empty-state"><div class="icon">📋</div><p>Run the agents first to generate today's plan and a weekly summary.</p></div>`;
+  document.getElementById('chatWindow').innerHTML = '';
+  document.getElementById('chatSuggestions').innerHTML = '';
+}
+
+document.getElementById('runBtn').addEventListener('click', ()=>{ document.getElementById('injectBtn').disabled = false; });
+
+/* ============================ RENDER: QUEUE ============================ */
+function renderQueue(){
+  const el = document.getElementById('queueContent');
+  if (!appState.tasks.length){ return; }
+  let html = '';
+  if (appState.extracted.length){
+    html += `<div style="margin-bottom:16px; padding:12px 14px; background:var(--panel-2); border-radius:8px; border:1px solid var(--line);">
+      <span class="panel-title" style="margin-bottom:8px;">Newly extracted from unstructured text</span>
+      ${appState.extracted.map(t=>`<div style="font-size:12.5px; color:var(--muted); margin-bottom:5px;"><span style="color:var(--cyan)">●</span> <b style="color:var(--text); font-weight:500;">${t.title}</b> — from ${t.source}${t.deadline?` · due ${t.deadline}`:''}</div>`).join('')}
+    </div>`;
+  }
+  appState.tasks.forEach(t => {
+    const sevClass = t.severity === 'P1' ? 'p1' : (t.severity === 'P2' ? 'p2' : '');
+    html += `<div class="runway-row ${sevClass}">
+      <div class="rank-num">${String(t.rank).padStart(2,'0')}</div>
+      <div>
+        <div class="task-title">${t.title}</div>
+        <div class="task-meta">
+          <span class="chip sev-${t.severity}">${t.severity}</span>
+          ${t.deadline ? `<span class="chip">⏱ ${t.deadline}</span>` : ''}
+          ${t.dependencies ? `<span class="chip dep">🔗 ${t.dependencies}</span>` : ''}
+          ${t.business_impact ? `<span class="chip">${t.business_impact}</span>` : ''}
+        </div>
+        <div class="rationale"><b>Why this rank:</b> ${t.rationale || ''}</div>
+        ${t.sources && t.sources.length>1 ? `<div class="merged-from">merged from: ${t.sources.join(' + ')}</div>` : (t.sources?`<div class="merged-from">source: ${t.sources.join(', ')}</div>`:'')}
+      </div>
+      <div class="score-col">
+        <div class="score">${t.priority_score}</div>
+        <div class="score-bar"><i style="width:${t.priority_score}%"></i></div>
+      </div>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
+/* ============================ RENDER: DAILY PLAN ============================ */
+function renderPlan(){
+  const el = document.getElementById('planContent');
+  if (!appState.dailyPlan.length){ return; }
+  let html = appState.dailyPlan.map(p => `
+    <div class="plan-item">
+      <div class="plan-order">${p.order}</div>
+      <div>
+        <div class="task-title">${p.title}</div>
+        <div class="plan-reason">${p.reason || ''}</div>
+      </div>
+    </div>`).join('');
+  if (appState.weeklySummary){
+    html += `<div class="weekly-box"><span>Weekly Summary</span>${appState.weeklySummary}</div>`;
+  }
+  el.innerHTML = html;
+}
+
+/* ============================ TABS ============================ */
+function switchTab(name){
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+  document.getElementById('tab-' + name).classList.add('active');
+}
+
+/* ============================ CHAT ============================ */
+const SUGGESTED_QUESTIONS = [
+  'What is my top priority?',
+  'Summarize my emails',
+  'Why is this task ranked first?',
+  "What's blocking my teammates?",
+  'What should I work on next?'
+];
+
+function renderChatSuggestions(){
+  const el = document.getElementById('chatSuggestions');
+  el.innerHTML = SUGGESTED_QUESTIONS.map(q => `<div class="suggestion-chip" onclick="sendChat('${q.replace(/'/g,"\\'")}')">${q}</div>`).join('');
+}
+
+function addChatMessage(role, text){
+  const el = document.getElementById('chatWindow');
+  const div = document.createElement('div');
+  div.className = 'msg ' + role;
+  div.textContent = text;
+  el.appendChild(div);
+  el.scrollTop = el.scrollHeight;
+  return div;
+}
+
+async function sendChat(presetQuestion){
+  if (!pipelineRan){
+    switchTab('chat');
+    addChatMessage('bot', 'Run the agents first so I have your current tasks to reason about.');
+    return;
+  }
+  const input = document.getElementById('chatInput');
+  const question = presetQuestion || input.value.trim();
+  if (!question) return;
+  input.value = '';
+  addChatMessage('user', question);
+  const loadingMsg = addChatMessage('bot', '…thinking');
+
+  try {
+    const stateContext = JSON.stringify({ tasks: appState.tasks, daily_plan: appState.dailyPlan, weekly_summary: appState.weeklySummary });
+    const userText = `CURRENT TASK STATE:\n${stateContext}\n\nQUESTION: ${question}`;
+    const answer = await callClaude(CHAT_SYSTEM, userText);
+    loadingMsg.textContent = answer.trim();
+  } catch(err){
+    loadingMsg.textContent = `⚠ Couldn't reach TaskPilot: ${err.message}`;
+  }
+}
+</script>
+</body>
+</html>
