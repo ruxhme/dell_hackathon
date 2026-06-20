@@ -29,3 +29,4 @@ streamlit
 # --- Utilities ---
 python-dotenv
 numpy
+redis

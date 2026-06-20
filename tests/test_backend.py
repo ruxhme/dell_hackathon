@@ -118,7 +118,7 @@ def test_chaos_inject_clears_cache():
 # 5. Pipeline endpoints (mocked — don't need real LLM keys to test)
 # ══════════════════════════════════════════════════════════════════════════════
 
-def _make_mock_task(id="TASK-1", title="Fix login bug", severity="P1", source="jira"):
+def _make_mock_task(id="TASK-1", title="Fix login bug", severity="P1", source="github"):
     task = MagicMock()
     task.dict.return_value = {
         "id": id,
@@ -185,7 +185,7 @@ def test_daily_plan_tiers(mock_pipeline):
     p0_task.dict.return_value = {"id": "INC-1", "title": "Prod down", "severity": "P0", "score": 99}
 
     p2_task = MagicMock()
-    p2_task.dict.return_value = {"id": "JIRA-2", "title": "UI bug", "severity": "P2", "score": 50}
+    p2_task.dict.return_value = {"id": "GITHUB-2", "title": "UI bug", "severity": "P2", "score": 50}
 
     loaders, extractor, deduplicator, prioritizer = (
         MagicMock(), MagicMock(), MagicMock(), MagicMock()

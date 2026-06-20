@@ -23,6 +23,7 @@ from pydantic import BaseModel, Field, field_validator
 class TaskSource(str, Enum):
     """Origin system from which a task was ingested."""
     JIRA = "jira"
+    GITHUB = "github"
     SERVICENOW = "servicenow"
     EMAIL = "email"
     MEETING = "meeting"

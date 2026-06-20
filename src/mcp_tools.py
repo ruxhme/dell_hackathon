@@ -11,7 +11,9 @@ from __future__ import annotations
 
 import json
 import logging
+import time
 from typing import Optional
+import os
 
 from fastmcp import FastMCP
 
@@ -31,6 +33,12 @@ from src.extractor import extract_all_unstructured
 from src.deduplicator import deduplicate_tasks
 from src.prioritizer import prioritize_tasks
 
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
+
 logger = logging.getLogger(__name__)
 
 # ────────────────────────────────────────────────────────────
@@ -48,28 +56,79 @@ mcp = FastMCP(
 
 
 # ────────────────────────────────────────────────────────────
-# In-Memory State (shared across tool invocations)
+# Redis State Management
 # ────────────────────────────────────────────────────────────
 
-_state: dict = {
+redis_client = None
+if REDIS_AVAILABLE:
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    try:
+        redis_client = redis.from_url(redis_url, decode_responses=True)
+        redis_client.ping()
+        logger.info(f"mcp_tools connected to Redis at {redis_url}")
+    except Exception as e:
+        logger.warning(f"mcp_tools could not connect to Redis: {e}. Falling back to in-memory state.")
+        redis_client = None
+
+# Fallback in-memory state
+_fallback_state: dict = {
     "raw_tasks": [],
     "deduplicated_tasks": [],
     "prioritized_tasks": [],
     "chaos_injected": False,
 }
 
+def _serialize_tasks(tasks: list) -> list[dict]:
+    return [t.dict() if hasattr(t, "dict") else t for t in tasks]
+
+def _deserialize_tasks(data: list, model_class) -> list:
+    return [model_class(**item) if isinstance(item, dict) else item for item in data]
+
 
 def get_state() -> dict:
     """Return the current pipeline state (for agent/UI access)."""
-    return _state
+    if redis_client:
+        try:
+            state_str = redis_client.get("mcp_pipeline_state")
+            if state_str:
+                state_data = json.loads(state_str)
+                # Rehydrate objects
+                state_data["raw_tasks"] = _deserialize_tasks(state_data.get("raw_tasks", []), Task)
+                state_data["deduplicated_tasks"] = _deserialize_tasks(state_data.get("deduplicated_tasks", []), Task)
+                state_data["prioritized_tasks"] = _deserialize_tasks(state_data.get("prioritized_tasks", []), PrioritizedTask)
+                return state_data
+        except Exception as e:
+            logger.warning(f"Error reading state from Redis: {e}")
+            
+    return _fallback_state
+
+def save_state(state: dict) -> None:
+    if redis_client:
+        try:
+            serializable_state = {
+                "raw_tasks": _serialize_tasks(state.get("raw_tasks", [])),
+                "deduplicated_tasks": _serialize_tasks(state.get("deduplicated_tasks", [])),
+                "prioritized_tasks": _serialize_tasks(state.get("prioritized_tasks", [])),
+                "chaos_injected": state.get("chaos_injected", False)
+            }
+            # Cache state for 24 hours
+            redis_client.setex("mcp_pipeline_state", 86400, json.dumps(serializable_state, default=str))
+        except Exception as e:
+            logger.warning(f"Error saving state to Redis: {e}")
+            _fallback_state.update(state)
+    else:
+        _fallback_state.update(state)
 
 
 def reset_state() -> None:
     """Reset all pipeline state to initial values."""
-    _state["raw_tasks"] = []
-    _state["deduplicated_tasks"] = []
-    _state["prioritized_tasks"] = []
-    _state["chaos_injected"] = False
+    initial_state = {
+        "raw_tasks": [],
+        "deduplicated_tasks": [],
+        "prioritized_tasks": [],
+        "chaos_injected": False,
+    }
+    save_state(initial_state)
 
 
 # ────────────────────────────────────────────────────────────
@@ -81,7 +140,7 @@ def ingest_all_tasks() -> str:
     """
     Ingest tasks from ALL data sources.
 
-    Loads structured tasks from Jira and ServiceNow, then extracts hidden
+    Loads structured tasks from Jira, GitHub, and ServiceNow, then extracts hidden
     tasks from emails and meeting transcripts using LLM-powered parsing.
     Returns a summary of ingested items.
     """
@@ -89,7 +148,7 @@ def ingest_all_tasks() -> str:
 
     # Phase 1: Structured sources
     structured_tasks = load_all_structured_tasks()
-    logger.info(f"  ✅ Loaded {len(structured_tasks)} structured tasks (Jira + ServiceNow)")
+    logger.info(f"  ✅ Loaded {len(structured_tasks)} structured tasks (Jira + GitHub + ServiceNow)")
 
     # Phase 2: Unstructured sources (LLM extraction)
     emails = load_emails_raw()
@@ -99,12 +158,15 @@ def ingest_all_tasks() -> str:
 
     # Combine
     all_tasks = structured_tasks + extracted_tasks
-    _state["raw_tasks"] = all_tasks
+    
+    state = get_state()
+    state["raw_tasks"] = all_tasks
+    save_state(state)
 
     summary = (
         f"Ingestion complete. Discovered {len(all_tasks)} total tasks:\n"
         f"  • {len(structured_tasks)} from structured sources "
-        f"(Jira + ServiceNow)\n"
+        f"(Jira + GitHub + ServiceNow)\n"
         f"  • {len(extracted_tasks)} extracted from unstructured text "
         f"(emails + meetings)\n\n"
         f"Sources breakdown:\n"
@@ -133,20 +195,22 @@ def deduplicate_current_tasks(similarity_threshold: float = 0.85) -> str:
         similarity_threshold: Cosine similarity threshold for semantic
                               matching. Default 0.85 (conservative).
     """
-    if not _state["raw_tasks"]:
+    state = get_state()
+    if not state["raw_tasks"]:
         return "No tasks to deduplicate. Run ingest_all_tasks first."
 
-    original_count = len(_state["raw_tasks"])
+    original_count = len(state["raw_tasks"])
     logger.info(
         f"🔄 Running deduplication on {original_count} tasks "
         f"(threshold={similarity_threshold})..."
     )
 
     deduped = deduplicate_tasks(
-        _state["raw_tasks"],
+        state["raw_tasks"],
         similarity_threshold=similarity_threshold,
     )
-    _state["deduplicated_tasks"] = deduped
+    state["deduplicated_tasks"] = deduped
+    save_state(state)
 
     removed = original_count - len(deduped)
     summary = (
@@ -190,10 +254,11 @@ def prioritize_current_tasks(
         weight_dependencies: Weight for blocker status (default 0.20).
         weight_impact:       Weight for business impact (default 0.15).
     """
+    state = get_state()
     tasks_to_prioritize = (
-        _state["deduplicated_tasks"]
-        if _state["deduplicated_tasks"]
-        else _state["raw_tasks"]
+        state["deduplicated_tasks"]
+        if state["deduplicated_tasks"]
+        else state["raw_tasks"]
     )
 
     if not tasks_to_prioritize:
@@ -213,7 +278,8 @@ def prioritize_current_tasks(
     )
 
     prioritized = prioritize_tasks(tasks_to_prioritize, weights=weights)
-    _state["prioritized_tasks"] = prioritized
+    state["prioritized_tasks"] = prioritized
+    save_state(state)
 
     summary = f"📋 **Prioritized Daily Plan** ({len(prioritized)} tasks):\n\n"
     for pt in prioritized:
@@ -256,18 +322,22 @@ def inject_chaos_defect() -> str:
     This demonstrates the system's dynamic adaptability.
     """
     logger.info("🔥 CHAOS INJECTION: Loading critical production defect...")
+    
+    state = get_state()
 
     chaos_task = load_chaos_defect()
-    _state["raw_tasks"].append(chaos_task)
-    _state["chaos_injected"] = True
+    state["raw_tasks"].append(chaos_task)
+    state["chaos_injected"] = True
 
     # Re-run deduplication on the augmented dataset
-    deduped = deduplicate_tasks(_state["raw_tasks"])
-    _state["deduplicated_tasks"] = deduped
+    deduped = deduplicate_tasks(state["raw_tasks"])
+    state["deduplicated_tasks"] = deduped
 
     # Re-run prioritization
     prioritized = prioritize_tasks(deduped)
-    _state["prioritized_tasks"] = prioritized
+    state["prioritized_tasks"] = prioritized
+    
+    save_state(state)
 
     # Build alert
     alert = (
@@ -313,11 +383,12 @@ def get_task_details(task_title: str) -> str:
     Args:
         task_title: Full or partial title of the task to look up.
     """
+    state = get_state()
     # Search in prioritized tasks first, then deduplicated, then raw
     search_pools = [
-        _state["prioritized_tasks"],
-        _state["deduplicated_tasks"],
-        _state["raw_tasks"],
+        state["prioritized_tasks"],
+        state["deduplicated_tasks"],
+        state["raw_tasks"],
     ]
 
     for pool in search_pools:
@@ -405,11 +476,12 @@ def get_pipeline_status() -> str:
     Return the current state of the pipeline for diagnostic purposes.
     Shows counts of tasks at each stage and whether chaos has been injected.
     """
+    state = get_state()
     status = (
         "📊 **Pipeline Status**\n\n"
-        f"• Raw tasks ingested: {len(_state['raw_tasks'])}\n"
-        f"• After deduplication: {len(_state['deduplicated_tasks'])}\n"
-        f"• Prioritized tasks: {len(_state['prioritized_tasks'])}\n"
-        f"• Chaos injected: {'🔥 Yes' if _state['chaos_injected'] else '❌ No'}\n"
+        f"• Raw tasks ingested: {len(state['raw_tasks'])}\n"
+        f"• After deduplication: {len(state['deduplicated_tasks'])}\n"
+        f"• Prioritized tasks: {len(state['prioritized_tasks'])}\n"
+        f"• Chaos injected: {'🔥 Yes' if state['chaos_injected'] else '❌ No'}\n"
     )
     return status

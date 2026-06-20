@@ -12,6 +12,13 @@ import time
 import logging
 import json
 import hashlib
+import os
+
+try:
+    import redis
+    REDIS_AVAILABLE = True
+except ImportError:
+    REDIS_AVAILABLE = False
 
 # ── Logging setup ──────────────────────────────────────────────────────────────
 logging.basicConfig(
@@ -34,27 +41,64 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── Simple in-memory cache ─────────────────────────────────────────────────────
-# Avoids re-calling the LLM for identical requests within the same session.
-_cache: dict = {}
+# ── Redis Cache setup ─────────────────────────────────────────────────────────
 CACHE_TTL_SECONDS = 300  # 5 minutes
+redis_client = None
 
+if REDIS_AVAILABLE:
+    redis_url = os.getenv("REDIS_URL", "redis://localhost:6379/0")
+    try:
+        redis_client = redis.from_url(redis_url, decode_responses=True)
+        redis_client.ping()
+        logger.info(f"Connected to Redis at {redis_url}")
+    except Exception as e:
+        logger.warning(f"Could not connect to Redis: {e}. Falling back to in-memory cache.")
+        redis_client = None
+else:
+    logger.info("Redis package not installed. Falling back to in-memory cache.")
+
+# Fallback in-memory cache
+_memory_cache: dict = {}
 
 def _cache_key(*args) -> str:
     raw = json.dumps(args, sort_keys=True, default=str)
     return hashlib.md5(raw.encode()).hexdigest()
 
-
 def _cache_get(key: str):
-    entry = _cache.get(key)
-    if entry and (time.time() - entry["ts"] < CACHE_TTL_SECONDS):
-        logger.info(f"Cache HIT for key {key[:8]}…")
-        return entry["data"]
+    if redis_client:
+        try:
+            cached_data = redis_client.get(key)
+            if cached_data:
+                logger.info(f"Redis Cache HIT for key {key[:8]}…")
+                return json.loads(cached_data)
+        except Exception as e:
+            logger.warning(f"Redis get error: {e}")
+    else:
+        entry = _memory_cache.get(key)
+        if entry and (time.time() - entry["ts"] < CACHE_TTL_SECONDS):
+            logger.info(f"Memory Cache HIT for key {key[:8]}…")
+            return entry["data"]
     return None
 
-
 def _cache_set(key: str, data):
-    _cache[key] = {"ts": time.time(), "data": data}
+    if redis_client:
+        try:
+            redis_client.setex(key, CACHE_TTL_SECONDS, json.dumps(data))
+        except Exception as e:
+            logger.warning(f"Redis set error: {e}")
+    else:
+        _memory_cache[key] = {"ts": time.time(), "data": data}
+
+def _cache_clear():
+    if redis_client:
+        try:
+            redis_client.flushdb()
+            logger.info("Redis cache cleared")
+        except Exception as e:
+            logger.warning(f"Redis clear error: {e}")
+    else:
+        _memory_cache.clear()
+        logger.info("Memory cache cleared")
 
 
 # ── Request / Response models ──────────────────────────────────────────────────
@@ -63,13 +107,11 @@ class ChatRequest(BaseModel):
     message: str
     history: Optional[list] = []
 
-
 class PriorityWeights(BaseModel):
     severity: float = 0.4
     urgency: float = 0.3
     dependencies: float = 0.2
     impact: float = 0.1
-
 
 class ChaosRequest(BaseModel):
     title: str = "CRITICAL: Production Database Down"
@@ -100,7 +142,11 @@ def _get_pipeline():
 @app.get("/health")
 def health_check():
     """Quick liveness check — use this to confirm the server is running."""
-    return {"status": "ok", "timestamp": time.time()}
+    return {
+        "status": "ok", 
+        "timestamp": time.time(),
+        "cache_type": "redis" if redis_client else "memory"
+    }
 
 
 @app.get("/tasks/all")
@@ -277,7 +323,7 @@ def inject_chaos(req: ChaosRequest, background_tasks: BackgroundTasks):
     logger.warning(f"CHAOS INJECTION: {req.title} ({req.severity})")
 
     # Clear cache so reprioritization picks up the new task
-    _cache.clear()
+    _cache_clear()
 
     chaos_task = {
         "id": f"CHAOS-{int(time.time())}",
@@ -297,11 +343,9 @@ def inject_chaos(req: ChaosRequest, background_tasks: BackgroundTasks):
 
 @app.delete("/cache")
 def clear_cache():
-    """Manually clear the in-memory cache (useful during testing or after data changes)."""
-    count = len(_cache)
-    _cache.clear()
-    logger.info(f"Cache cleared ({count} entries removed)")
-    return {"message": f"Cache cleared. {count} entries removed."}
+    """Manually clear the cache (useful during testing or after data changes)."""
+    _cache_clear()
+    return {"message": "Cache cleared."}
 
 
 @app.get("/sources/status")

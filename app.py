@@ -438,7 +438,7 @@ if not st.session_state.messages:
     welcome_msg = (
         "👋 Welcome to **TaskPilot AI** — your personal digital chief of staff!\n\n"
         "I can help you:\n"
-        "- 📥 **Ingest tasks** from Jira, ServiceNow, emails, and meetings\n"
+        "- 📥 **Ingest tasks** from GitHub, ServiceNow, emails, and meetings\n"
         "- 🔍 **Deduplicate** overlapping items using semantic analysis\n"
         "- 📊 **Prioritize** your workload with a deterministic scoring formula\n"
         "- 🔥 **Handle chaos** when critical defects strike mid-day\n\n"
@@ -446,7 +446,7 @@ if not st.session_state.messages:
         '- *"Generate my daily plan"*\n'
         '- *"What are my highest priority tasks?"*\n'
         '- *"Tell me about the payment gateway issue"*\n'
-        '- *"What\'s the current pipeline status?"*\n\n'
+        '- *"What\'s the current pipeline status?"*\n\n"What tasks were loaded from GitHub?"\n\n'
         "Use the **🔥 Simulate Chaos** button in the sidebar to test dynamic adaptability!"
     )
     st.session_state.messages.append({"role": "assistant", "content": welcome_msg})
