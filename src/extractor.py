@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Optional
 
 from dotenv import load_dotenv
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import ValidationError
 
@@ -41,28 +41,29 @@ logger = logging.getLogger(__name__)
 _MAX_RETRIES: int = 3
 
 
-def _get_llm() -> ChatGoogleGenerativeAI:
-    """Return a configured Gemini 1.5 Flash instance.
+def _get_llm() -> ChatOpenAI:
+    """Return a configured GPT-4o-mini instance.
 
     The ``temperature`` is kept low (0.1) to favour deterministic,
     schema-compliant outputs over creative variation.
 
     Returns:
-        ChatGoogleGenerativeAI: Ready-to-use LLM client.
+        ChatOpenAI: Ready-to-use LLM client.
 
     Raises:
-        RuntimeError: If ``GOOGLE_API_KEY`` is not set in the environment.
+        RuntimeError: If ``OPENAI_API_KEY`` is not set in the environment.
     """
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "GOOGLE_API_KEY environment variable is not set. "
+            "OPENAI_API_KEY environment variable is not set. "
             "Please add it to your .env file."
         )
-    return ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=api_key,
+
+    return ChatOpenAI(
+        model="gpt-4o-mini",
         temperature=0.1,
+        api_key=api_key,
     )
 
 

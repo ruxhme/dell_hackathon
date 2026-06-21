@@ -4,10 +4,10 @@
 
 # --- Core LLM & Orchestration ---
 langchain
-langchain-google-genai
+langchain-openai
 langchain-core
 langgraph
-google-generativeai
+openai
 
 # --- Data Validation ---
 pydantic

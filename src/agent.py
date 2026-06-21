@@ -28,7 +28,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_openai import ChatOpenAI
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -364,15 +364,15 @@ Today's date is: {today}
 
 def _get_llm():
     """Initialize the language model with tool bindings."""
-    api_key = os.getenv("GOOGLE_API_KEY")
+    api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
         raise ValueError(
-            "GOOGLE_API_KEY not found. Set it in your .env file."
+            "OPENAI_API_KEY not found. Set it in your .env file."
         )
 
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-2.5-flash",
-        google_api_key=api_key,
+    llm = ChatOpenAI(
+        model="gpt-4o-mini",
+        api_key=api_key,
         temperature=0.3,
         max_retries=2,
     )
