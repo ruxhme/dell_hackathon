@@ -400,7 +400,7 @@ def chat_node(state: AgentState) -> dict:
     except Exception as exc:
         logger.error("LLM invoke failed (quota or network issue): %s", exc)
         from langchain_core.messages import AIMessage
-        response = AIMessage(content="[System] The LLM API quota has been exhausted or an error occurred. The pipeline operations were attempted, but I cannot generate a detailed response right now. Please check your Google API quota.")
+        response = AIMessage(content="[System] The LLM API quota has been exhausted or an error occurred. The pipeline operations were attempted, but I cannot generate a detailed response right now. Please check your OpenAI API billing and quota.")
     logger.info(
         f"🧠 Chat node response: "
         f"{'[tool_calls]' if response.tool_calls else '[text]'}"
