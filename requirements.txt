@@ -4,10 +4,9 @@
 
 # --- Core LLM & Orchestration ---
 langchain
-langchain-openai
+langchain-groq
 langchain-core
 langgraph
-openai
 
 # --- Data Validation ---
 pydantic

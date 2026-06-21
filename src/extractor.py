@@ -19,7 +19,7 @@ from datetime import datetime
 from typing import Optional
 
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from pydantic import ValidationError
 
@@ -41,27 +41,27 @@ logger = logging.getLogger(__name__)
 _MAX_RETRIES: int = 3
 
 
-def _get_llm() -> ChatOpenAI:
-    """Return a configured GPT-4o-mini instance.
+def _get_llm() -> ChatGroq:
+    """Return a configured Llama 3 8B instance.
 
     The ``temperature`` is kept low (0.1) to favour deterministic,
     schema-compliant outputs over creative variation.
 
     Returns:
-        ChatOpenAI: Ready-to-use LLM client.
+        ChatGroq: Ready-to-use LLM client.
 
     Raises:
-        RuntimeError: If ``OPENAI_API_KEY`` is not set in the environment.
+        RuntimeError: If ``GROQ_API_KEY`` is not set in the environment.
     """
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise RuntimeError(
-            "OPENAI_API_KEY environment variable is not set. "
+            "GROQ_API_KEY environment variable is not set. "
             "Please add it to your .env file."
         )
 
-    return ChatOpenAI(
-        model="gpt-4o-mini",
+    return ChatGroq(
+        model="llama3-8b-8192",
         temperature=0.1,
         api_key=api_key,
     )

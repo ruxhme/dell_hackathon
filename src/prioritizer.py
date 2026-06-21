@@ -24,7 +24,7 @@ from datetime import datetime
 from typing import Optional
 
 from dotenv import load_dotenv
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 
 from src.schemas import (
@@ -245,25 +245,25 @@ def rank_tasks(
 _LLM_RATIONALE_LIMIT = 10  # Only call the LLM for the top N tasks.
 
 
-def _get_llm() -> ChatOpenAI:
-    """Instantiate the OpenAI LLM client used for rationale generation.
+def _get_llm() -> ChatGroq:
+    """Instantiate the Groq LLM client used for rationale generation.
 
     Returns:
-        A ``ChatOpenAI`` instance configured with low temperature
+        A ``ChatGroq`` instance configured with low temperature
         for deterministic-leaning outputs.
 
     Raises:
-        ValueError: If the ``OPENAI_API_KEY`` environment variable is missing.
+        ValueError: If the ``GROQ_API_KEY`` environment variable is missing.
     """
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY environment variable is not set. "
+            "GROQ_API_KEY environment variable is not set. "
             "Cannot initialise LLM for rationale generation."
         )
 
-    return ChatOpenAI(
-        model="gpt-4o-mini",
+    return ChatGroq(
+        model="llama3-8b-8192",
         temperature=0.2,
         api_key=api_key,
     )

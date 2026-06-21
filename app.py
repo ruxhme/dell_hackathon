@@ -422,14 +422,14 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # API Key Check
-api_key = os.getenv("OPENAI_API_KEY")
+api_key = os.getenv("GROQ_API_KEY")
 if not api_key:
     st.error(
-        "⚠️ **OPENAI_API_KEY not found!** "
+        "⚠️ **GROQ_API_KEY not found!** "
         "Create a `.env` file in the project root with your API key. "
         "See `.env.example` for the template."
     )
-    st.info("Get your API key at: https://platform.openai.com/api-keys")
+    st.info("Get your API key at: https://console.groq.com/keys")
     st.stop()
 
 
@@ -513,7 +513,7 @@ if user_input := st.chat_input("Ask TaskPilot AI anything..."):
                     response_placeholder.markdown(full_response)
 
             except Exception as e:
-                full_response = f"❌ An error occurred: {str(e)}\n\nPlease check that your OPENAI_API_KEY is valid and try again."
+                full_response = f"❌ An error occurred: {str(e)}\n\nPlease check that your GROQ_API_KEY is valid and try again."
                 st.error(full_response)
                 logger.error(f"Agent error: {e}", exc_info=True)
 

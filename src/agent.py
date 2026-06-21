@@ -28,7 +28,7 @@ from langchain_core.messages import (
     ToolMessage,
 )
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
-from langchain_openai import ChatOpenAI
+from langchain_groq import ChatGroq
 from langgraph.graph import END, StateGraph
 from langgraph.graph.message import add_messages
 from langgraph.prebuilt import ToolNode
@@ -364,14 +364,14 @@ Today's date is: {today}
 
 def _get_llm():
     """Initialize the language model with tool bindings."""
-    api_key = os.getenv("OPENAI_API_KEY")
+    api_key = os.getenv("GROQ_API_KEY")
     if not api_key:
         raise ValueError(
-            "OPENAI_API_KEY not found. Set it in your .env file."
+            "GROQ_API_KEY not found. Set it in your .env file."
         )
 
-    llm = ChatOpenAI(
-        model="gpt-4o-mini",
+    llm = ChatGroq(
+        model="llama3-8b-8192",
         api_key=api_key,
         temperature=0.3,
         max_retries=2,
