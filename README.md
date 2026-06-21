@@ -29,6 +29,7 @@ TaskPilot AI is an advanced agentic coding solution designed to aggregate, dedup
 └── src/                        # Core application modules
     ├── agent.py                # LangGraph orchestration logic
     ├── deduplicator.py         # 2-stage semantic deduplication engine
+    ├── evaluate.py             # Evaluation harness for quantitative metrics
     ├── extractor.py            # LLM unstructured text extraction
     ├── loaders.py              # Data source ingestion
     ├── mcp_tools.py            # FastMCP tool server bridge
