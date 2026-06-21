@@ -308,10 +308,10 @@ def inject_chaos_defect() -> str:
 @mcp.tool()
 def get_task_details(task_title: str) -> str:
     """
-    Retrieve full details for a specific task by title (partial match).
+    Retrieve full details for a specific task by searching for keywords.
 
     Args:
-        task_title: Full or partial title of the task to look up.
+        task_title: A short, distinctive keyword to search for (e.g. "payment", "stripe", "CVE"). Do not include filler words like "issue" or "problem".
     """
     # Search in prioritized tasks first, then deduplicated, then raw
     search_pools = [
@@ -320,10 +320,20 @@ def get_task_details(task_title: str) -> str:
         _state["raw_tasks"],
     ]
 
+    search_terms = [t for t in task_title.lower().split() if len(t) > 3 and t not in ["issue", "problem", "task", "bug"]]
+    if not search_terms:
+        search_terms = [task_title.lower()]
+
+    found_details = []
+
     for pool in search_pools:
         for item in pool:
             task = item.task if isinstance(item, PrioritizedTask) else item
-            if task_title.lower() in task.title.lower():
+            
+            # Check if any search term matches the title or description
+            title_lower = task.title.lower()
+            desc_lower = task.description.lower()
+            if any(term in title_lower or term in desc_lower for term in search_terms):
                 detail = (
                     f"📋 **Task Details: {task.title}**\n\n"
                     f"• **ID:** {task.id}\n"
