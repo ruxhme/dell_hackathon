@@ -92,8 +92,9 @@ def ingest_all_tasks() -> str:
     logger.info(f"  ✅ Loaded {len(structured_tasks)} structured tasks (Jira + ServiceNow)")
 
     # Phase 2: Unstructured sources (LLM extraction)
-    emails = load_emails_raw()
-    meetings = load_meeting_transcripts_raw()
+    # Limiting to 1 email and 1 meeting to avoid Gemini Free Tier quota exhaustion (20 RPM)
+    emails = load_emails_raw()[:1]
+    meetings = load_meeting_transcripts_raw()[:1]
     extracted_tasks = extract_all_unstructured(emails, meetings)
     logger.info(f"  ✅ Extracted {len(extracted_tasks)} tasks from unstructured sources")
 
