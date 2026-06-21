@@ -242,7 +242,7 @@ def rank_tasks(
 # LLM Rationale Generation
 # ────────────────────────────────────────────────────────────
 
-_LLM_RATIONALE_LIMIT = 10  # Only call the LLM for the top N tasks.
+_LLM_RATIONALE_LIMIT = 3  # Only call the LLM for the top 3 tasks (as per hackathon PDF requirements) to stay safely below Groq's 30 RPM limit.
 
 
 def _get_llm() -> ChatGroq:
